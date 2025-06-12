@@ -1,0 +1,9 @@
+services:
+  devbox:
+    build: 
+      dockerfile: ./.devcontainer/DockerFile
+    container_name: coaster-devbox
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./:/workspace/project

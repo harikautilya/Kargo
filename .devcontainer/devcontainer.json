@@ -1,0 +1,13 @@
+{
+  "name": "Kargo",
+  "dockerComposeFile": [
+    "../docker-compose.yml"
+  ],
+  "service": "devbox",
+  "workspaceFolder": "/workspace/project",
+  "customizations": {
+    "vscode": {
+      "extensions": []
+    }
+  }
+}

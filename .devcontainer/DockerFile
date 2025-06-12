@@ -1,0 +1,10 @@
+FROM python:3.10.16-alpine3.21
+
+WORKDIR /workspace/project
+
+RUN apk update \
+    && apk add --virtual build-deps gcc musl-dev \
+    && apk add --no-cache mariadb-dev
+RUN apk upgrade
+
+CMD ["python"]
