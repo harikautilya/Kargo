@@ -8,6 +8,7 @@ dependencies = [
   "Django==5.2.3",
   "sqlparse==0.5.3",
   "typing_extensions==4.14.0",
+  "mysqlclient==2.2.7"
 ]
 name = "kargo-backend"
 version = "1.0"

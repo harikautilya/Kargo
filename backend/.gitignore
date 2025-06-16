@@ -1,2 +1,3 @@
 .server/
 *.egg-info
+*.pyc
