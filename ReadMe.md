@@ -92,7 +92,13 @@ The db SQL should be maintained and executed seperately, this ensures that the d
     - The table keeps track of status 
 
 ### Infrastructure 
-Since this a simple assignment, Infrastructure is outside the scope this design. In real world we would take advantage of scheudling and async process to speed the application further.
+Since this a simple assignment, Infrastructure is outside the scope this design. In real world we would take advantage of scheudling and async process to speed the application further. The applicaiton will be deployed using GCP with the following services, no load balance or auto scaling stragies are needed here.
+
+1. Compute VM : e2-micro , us-central1 , external IP
+2. Cloud SQL: Enterpise, Sandbox , us-central1, single zone
+3. IP : 1 static IP address
+
+Expected pricing : ~ 88$ - 100$ 
 
 ### API Design
 
