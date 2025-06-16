@@ -1,5 +1,6 @@
 # Project repo
 This is a repo for a service application that enables user to deploy appplications to a cluster by providing docker image path.
+
 ## Feature list
 - Basic auth : User can logged using a basic auth
 - Organization : User can create organization 
@@ -57,7 +58,7 @@ Since it a fake system, the following remove out of the scope and would only mak
 - Service must be packaged with docker as containter
 - Service should support around 10 users at any instant of time
 
-## HLD 
+## High level Design (HLD) 
 
 Kargo is a internal tool that provides the ability for developers to deploy applicaiton. It provides the ability for the developer to declare the resource and deployment applicaiton with ease. To faciliate this process a backend application based on django will be deveploed. The following app will be package as single django application
 
@@ -135,11 +136,13 @@ The following apis will be developed as part of the the deployment app
 - `DELETE /deployment/<pk>/` : Delete deployment 
 - `DELETE /deployment/?clusterId=<id>` : Delete deployment 
 
-###### Create deployment
+###### Create deployement sequnce diagram
 
 ![Create deployment](/docs/assets/create_deployment.png)
 
-##### Create deployement sequnce diagram
+### Testing
+No speicfic testing pratices is implmemted as part of this assignment.
+
 ### Appendix
 
 #### Get user details
@@ -324,5 +327,125 @@ curl --location --request DELETE 'http://localhost:8001/deployment/:id/' \
 --header 'Authorization: Bearer test' \
 --data ''
 ```
+
+
+## Low Level design (LLD)
+
+The documents holds the bare bones implmentation of the internal tool `Kargo` django application. Each application will follow the same general principles of the Design. Three domain specific app will be introduce namely user, deployment and clusters. Two code specific apps will be introducted namely core and shared.
+
+- `user` : Responsilble to maintin user domain specific code
+- `deployment` :  Responsible to maintain deployment domain specific code
+- `cluster` :  Responsible to maintain cluster domain specific code
+- `shared` :  Hold shared code to avoid `DRY`, examples include making reverse api class etc.
+- `core` : Holds generailzied implentation and sample that are generic but not related to any domnain or implmented. Example include BaseModel, BaseController etc.
+
+The code will be built using SOLID principles to ensure that the application is testable, re-usable, de-coupled and pluggable. Keeping the possible use-case the following main use-cases are identifed for all the programmable logics
+
+- Factory patten to generate service classes and dao classes
+- Adapter pattern to control logic building between models and api shapes
+- Chain of custody patten for validation and verification
+- No native implementation will be avialable but all the object shapes will be declared as struct using `dataclasses`
+- `pydantic` will be used for validation and serde.
+
+All the tests will be written and maintained within the app under the folder tests and file specific tests will be maintained. 
+
+Consider the operation of deleteing a deployment, the below example showcase how each pattern will be implmented within the application.
+
+### Adapter pattern
+We would have two way to delete a deployment, either through api or through models class. Each implementation will be behind adapter class that hold the core logic
+
+```
+# Adapter
+class DeploymentAdapter
+
+    def __init__(self):
+        pass
+    
+    @abstractmethod
+    def deleteDeployment(self, id):
+        pass
+
+class DeploymentApis(DeploymentAdapter):
+
+    def __init__(self):
+        pass
+    
+    def deleteDeployment(self, id):
+        # Some api calls
+
+class DeploymentModels(DeployemtnAdapter):
+
+    def __init__(self):
+        pass
+    
+    def deleteDeployment(self, id):
+        # Some model class
+```
+
+The factor method would provide both the objects maintined in a single class, the factory can return singleton if and when required
+
+
+### Factory pattern
+
+All the models/logics will be implemented behind a adatper implmentation, the service class will maintained by the implmentation using composition to enable the control and close the implmentation behind a method/class.
+
+
+```
+# Service class with composition 
+class DeploymentCrud:
+     
+    dao = None
+    def __init__(self, dao):
+        self.adatper = adatper
+
+    def delete_deployment(self, id) -> Boolean:
+        return self.adatper.deleteDeploymentById(id)
+
+# Factory pattern
+class DeploymentCrudFactory:
+
+    def __init__(self):
+        pass
+
+    def create_deployment_crud_with_apid(self) -> DeploymentAdapter:
+        api = DeploymentApis()
+        return DeploymentCrud(api)
+
+    def create_deployment_crud_with_models(self) -> DeploymentAdapter:
+        api = DeploymentModels()
+        return DeploymentCrud(api)
+```
+
+### Chain of custody 
+Each implementation can have different use-cases where data has to be validated before execution, Each such use-case is declared as single class and final usage is chained to verify/validate
+
+```
+class AbstractValidate(ABC):
+
+    def __init__(self):
+        self._next: Optional[AbstractValidate] = None
+
+    @abstractmethod
+    def set_next(self,validate: AbstractValidate ):
+        self._next = validate
+        return validate
+
+    @abstractmethod
+    def validate(self, object) -> Optional[AbstractValidate]:
+        if self._next:
+            return self._next.validate(object)
+        return None
+```
+
+Let us assume that we have validator as following `IsClusterPresent`,`BelongToUser` and `SomeOtherValidation`etc.
+The validation would similfy somthing 
+
+```
+validator = SomeOtherValidation().set_next(IsClusterPresent()).set_next(BelongToUser())
+```
+This ensures to remove and add validate if and when needed 
+
+
+
 
 
