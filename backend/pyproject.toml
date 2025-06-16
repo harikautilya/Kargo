@@ -1,0 +1,16 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools>=61.0"]
+
+[project]
+dependencies = [
+  "asgiref==3.8.1",
+  "Django==5.2.3",
+  "sqlparse==0.5.3",
+  "typing_extensions==4.14.0",
+]
+name = "kargo-backend"
+version = "1.0"
+
+[project.optional-dependencies]
+dev = ["black", "django-stubs", "ipdb", "pip-tools", "ruff"]
