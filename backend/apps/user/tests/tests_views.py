@@ -1,6 +1,7 @@
 from rest_framework.test import APITestCase
 from rest_framework import status
 from django.urls import reverse
+from unittest.mock import patch, Mock
 
 
 class TestAuthView(APITestCase):
@@ -21,9 +22,19 @@ class TestAuthView(APITestCase):
 class TestCreateOrganizationView(APITestCase):
 
     def setUp(self):
-        pass
+        patcher = patch("user.views.UserServiceFactory.create_user_service")
+        self.mock_get_instance = patcher.start()
+        self.addCleanup(patcher.stop)
+
+
 
     def test_put_create_org_request(self):
+
+        self.mock_service = Mock()
+        self.mock_user = Mock(id=1)
+        self.mock_service.create_user.return_value = self.mock_user
+        self.mock_get_instance.return_value = self.mock_service
+    
         url = "/organization/"
         payload = {
             "user": {
