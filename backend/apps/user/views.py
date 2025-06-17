@@ -1,7 +1,8 @@
 from rest_framework.views import APIView
 from core.views import BaseJsonView
 from dataclasses import dataclass
-from .dao import *
+from .service import UserServiceFactory
+from .requests import UserR, OrganizationR
 import logging
 
 logger = logging.getLogger(__name__)
@@ -13,7 +14,7 @@ class UserView(APIView, BaseJsonView):
     View class for user details.
     This is auth protected.
     """
-    
+
     def get(self, request):
         """
         Get user details.
@@ -29,7 +30,7 @@ class AuthView(APIView, BaseJsonView):
     """
 
     @dataclass(repr=True, frozen=True, eq=True)
-    class LoginUserView(User):
+    class LoginUserView(UserR):
         pass
 
     def post(self, request):
@@ -47,18 +48,23 @@ class CreateOrganizationView(APIView, BaseJsonView):
     Once roles are set out we would protect it behind an admin/owner role
     """
 
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.user_service = UserServiceFactory.create_user_service()
+
     @dataclass(repr=True, frozen=True, eq=True)
     class CreateOrganizationRequest:
         """
         Request class for put request
         """
-        user: User
-        organization: Organization
+
+        user: UserR
+        organization: OrganizationR
 
         @staticmethod
         def from_data(data: dict):
-            user = User.from_data(data["user"])
-            organization = Organization.from_data(data["organization"])
+            user = UserR.from_data(data["user"])
+            organization = OrganizationR.from_data(data["organization"])
             return CreateOrganizationView.CreateOrganizationRequest(
                 user=user, organization=organization
             )
@@ -70,7 +76,10 @@ class CreateOrganizationView(APIView, BaseJsonView):
         create_request = CreateOrganizationView.CreateOrganizationRequest.from_data(
             request.data
         )
-        return self.ok_response({"hello": "there"})
+        user = self.user_service.create_user(
+            user=create_request.user.toDao(), org=create_request.organization.toDao()
+        )
+        return self.ok_response({"user_id": user.id})
 
 
 class InviteCodeView(APIView, BaseJsonView):
@@ -80,10 +89,11 @@ class InviteCodeView(APIView, BaseJsonView):
     """
 
     @dataclass(repr=True, frozen=True, eq=True)
-    class UserInviteCode(User):
+    class UserInviteCode(UserR):
         """
         Request class for post request
         """
+
         code: str
 
         @staticmethod
@@ -99,12 +109,13 @@ class InviteCodeView(APIView, BaseJsonView):
                 id=None,
                 code=code,
             )
+
     def get(self, request):
         """
         Check if invite code is valid
         """
         pass
-    
+
     def patch(self, request):
         """
         Generate invite code based on user.

@@ -10,8 +10,10 @@
       "request": "launch",
       "args": [
         "test",
-        "apps",
-        "--keepdb"
+        "apps/user",
+        "--keepdb",
+        "-v",
+        "2"
       ],
       "django": true,
       "autoStartBrowser": false,
