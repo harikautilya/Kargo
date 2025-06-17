@@ -5,7 +5,21 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Python Debugger: Django",
+      "name": "Django test",
+      "type": "debugpy",
+      "request": "launch",
+      "args": [
+        "test",
+        "apps",
+        "--keepdb"
+      ],
+      "django": true,
+      "autoStartBrowser": false,
+      "cwd": "${workspaceFolder}/backend",
+      "program": "manage.py"
+    },
+    {
+      "name": "Django Runserver",
       "type": "debugpy",
       "request": "launch",
       "justMyCode": false,
