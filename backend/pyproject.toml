@@ -9,7 +9,9 @@ dependencies = [
   "sqlparse==0.5.3",
   "typing_extensions==4.14.0",
   "mysqlclient==2.2.7",
-  "djangorestframework==3.16.0"
+  "djangorestframework==3.16.0",
+  "dataclasses==0.6",
+  "pydantic==2.11.7"
 ]
 name = "kargo-backend"
 version = "1.0"
