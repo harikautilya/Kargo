@@ -52,6 +52,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "user.auth.AuthMiddlware",
 ]
 
 ROOT_URLCONF = "kargo.urls"
@@ -137,7 +138,7 @@ LOGGING = {
         "general": {
             "format": " [{asctime}] [{levelname}] {message}",
             "style": "{",
-            'datefmt': '%Y-%m-%d %H:%M:%S',
+            "datefmt": "%Y-%m-%d %H:%M:%S",
         },
     },
     "handlers": {

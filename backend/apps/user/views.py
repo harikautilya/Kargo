@@ -1,8 +1,8 @@
 from rest_framework.views import APIView
 from core.views import BaseJsonView
 from dataclasses import dataclass
-from .service import UserServiceFactory
-from .requests import UserR, OrganizationR
+from .service import UserServiceFactory, AuthServiceFactory
+from .requests import UserR, OrganizationR, UserRes
 import logging
 
 logger = logging.getLogger(__name__)
@@ -15,12 +15,17 @@ class UserView(APIView, BaseJsonView):
     This is auth protected.
     """
 
+    def __init__(self, **kwargs) -> None:
+        self.user_service = UserServiceFactory.create_user_service()
+
     def get(self, request):
         """
         Get user details.
         This returns the user details based on the token in header.
         """
-        pass
+        user = self.user_service.get_user(id=request.user_id)
+    
+        return self.ok_response({"user": UserRes.from_dao(user).to_json()})
 
 
 class AuthView(APIView, BaseJsonView):
@@ -33,12 +38,17 @@ class AuthView(APIView, BaseJsonView):
     class LoginUserView(UserR):
         pass
 
+    def __init__(self, **kwargs) -> None:
+        self.auth_service = AuthServiceFactory.create_auth_service()
+
     def post(self, request):
         """
         Generate auth token based on username and password provided
         """
         login_request = AuthView.LoginUserView.from_data(request.data)
-        return self.ok_response({"hello": "there"})
+
+        auth_token = self.auth_service.validate_user(user=login_request.toDao())
+        return self.ok_response({"token": auth_token})
 
 
 class CreateOrganizationView(APIView, BaseJsonView):

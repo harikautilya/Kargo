@@ -11,7 +11,8 @@ dependencies = [
   "mysqlclient==2.2.7",
   "djangorestframework==3.16.0",
   "dataclasses==0.6",
-  "pydantic==2.11.7"
+  "pydantic==2.11.7",
+  "PyJWT==2.10.1"
 ]
 name = "kargo-backend"
 version = "1.0"

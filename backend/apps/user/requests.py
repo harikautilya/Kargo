@@ -54,3 +54,26 @@ class OrganizationR:
             id=None,
             name=self.name,
         )
+
+
+@dataclass(repr=True, eq=True, frozen=True)
+class UserRes:
+    """
+    This is data class for request object of user
+    """
+
+    display_name: str
+    id: int
+
+    @staticmethod
+    def from_dao(data: UserDao) -> "UserRes":
+        return UserRes(
+            display_name=data.display_name,  # type: ignore
+            id=data.id,  # type: ignore
+        )
+
+    def to_json(self):
+        return {
+            "id": self.id,
+            "display_name": self.display_name,
+        }
