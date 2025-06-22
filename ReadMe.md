@@ -108,8 +108,8 @@ Since this backend only application , there is not need to maintain an `/api/v1`
 The following apis will be developed as part user app.
 
 - `GET /user/` : Get user details
-- `PUT /user/create/` : Create User and orginzation
 - `POST /user/login/` : Login user and provide a token
+- `PUT /organization/` : Create User and orginzation
 - `GET /organization/`: Get organization details
 - `PATCH /organization/invite/` : Generate organization invite code
 - `GET /organization/invite/?code=` : Verify if the code is active
