@@ -1,113 +1,17 @@
-from abc import ABC, abstractmethod
-from .serializers import UserSerializer, OrganizationSerializer
-from .dao import UserDao, OrganizationDao
-from .models import User, Organization
-from django.contrib.auth.hashers import verify_password
+from .dao import UserDao, OrganizationDao, InviteCodeDao
 from django.db import transaction
 from .auth import UserCoder
-
-
-#### User classes
-class UserAdapter(ABC):
-    """
-    User adapater
-    """
-
-    def __init__(self) -> None:
-        pass
-
-    @abstractmethod
-    def validate_password(self, password: str, username: str) -> tuple[bool, int]:
-        pass
-
-    @abstractmethod
-    def get_user(self, id: int) -> UserDao:
-        pass
-
-    @abstractmethod
-    def create_user(self, user: UserDao, org: OrganizationDao) -> UserDao:
-        pass
-
-
-class UserModelAdapter(UserAdapter):
-    """
-    Adapter using models
-    """
-
-    def __init__(self) -> None:
-        super().__init__()
-
-    def validate_password(self, password: str, username: str) ->  tuple[bool, int]:
-        user = User.objects.only("password", "id").filter(username=username).first()
-        if user is None:
-            raise Exception(f"User with id not found : {username}")
-        is_correct, _ = verify_password(password=password, encoded=user.password)
-
-        return is_correct , user.id
-
-    def get_user(self, id: int) -> UserDao:
-        user = User.objects.filter(id=id).first()
-        if user is None:
-            raise Exception("User not found")
-
-        return UserDao(
-            id=user.id,
-            username=user.username,
-            password=None,
-            display_name=user.display_name,
-        )
-
-    def create_user(self, user: UserDao, org: OrganizationDao) -> UserDao:
-        user_dict = {
-            "username": user.username,
-            "password": user.password,
-            "display_name": user.display_name,
-            "org": org.id,
-        }
-        serializer = UserSerializer(data=user_dict)
-        if serializer.is_valid():
-            user = serializer.save()
-            return UserDao(
-                id=user.id,
-                username=user.username,
-                display_name=user.display_name,
-                password=None,
-            )
-        raise Exception(f"Something went wrong creating user: {serializer.errors}")
-
-
-#### Organization classes
-class OrganizationAdapter(ABC):
-    """
-    Organization adapter
-    """
-
-    def __init__(self) -> None:
-        pass
-
-    @abstractmethod
-    def create_organization(self, org: OrganizationDao) -> OrganizationDao:
-        pass
-
-
-class OrganizationModelAdapter(OrganizationAdapter):
-    """
-    Adapter using models
-    """
-
-    def __init__(self) -> None:
-        super().__init__()
-
-    def create_organization(self, org: OrganizationDao) -> OrganizationDao:
-        org_dict = {"organization_name": org.name}
-
-        serializer = OrganizationSerializer(data=org_dict)
-        if serializer.is_valid():
-            org_model = serializer.save()
-            return OrganizationDao(id=org_model.id, name=org_model.organization_name)
-        raise Exception(
-            f"Something went wrong creating organization:  {serializer.errors}"
-        )
+from django.conf import settings
+from .adapters import (
+    UserAdapter,
+    InviteCodeAdapter,
+    UserModelAdapter,
+    InviteCodeModelAdpater,
+    OrganizationAdapter,
+    OrganizationModelAdapter,
+)
+from datetime import datetime, timezone
+import logging
 
 
 ### Service class
@@ -121,9 +25,8 @@ class UserService:
         self.user_adapter = user_adapter
         self.org_adapter = org_adapter
 
-    def get_user(self, id:int) -> UserDao:
+    def get_user(self, id: int) -> UserDao:
         return self.user_adapter.get_user(id=id)
-
 
     @transaction.atomic
     def create_user(self, user: UserDao, org: OrganizationDao) -> UserDao:
@@ -186,3 +89,72 @@ class AuthServiceFactory:
             user_adatper = UserModelAdapter()
             cls._instance = AuthService(user_adapter=user_adatper)
         return cls._instance
+
+
+class InviteCodeService:
+
+    def __init__(
+        self,
+        user_adpater: UserAdapter,
+        invite_code_adapter: InviteCodeAdapter,
+        org_adapter: OrganizationAdapter,
+    ) -> None:
+        self.user_adapter = user_adpater
+        self.invite_code_adpater = invite_code_adapter
+        self.org_adapter = org_adapter
+
+    def create_user_code(self, id: int):
+        user = self.user_adapter.get_user(id=id)
+        invite_code = self.invite_code_adpater.create_invite_code(user=user)
+
+        return InviteCodeDao(code=invite_code.code)
+
+    def is_code_valid(self, code: str):
+        now = datetime.now(timezone.utc)
+        invite_code_dao = self.invite_code_adpater.get_invite_code(code=code)
+        if invite_code_dao is None:
+            # Invalid code provided
+            logging.debug(f"Invalid code provided {code}")
+            return False
+        if invite_code_dao.expiry_at is None:
+            raise Exception("Something went wrong while verifing the invite code")
+        is_expired = now > invite_code_dao.expiry_at and invite_code_dao.expired
+        
+        return not is_expired
+
+    @transaction.atomic
+    def create_user_using_code(self, user: UserDao, invite_code: InviteCodeDao):
+        # Check code validaty 
+        is_valid = self.is_code_valid(code=invite_code.code)
+        if not is_valid:
+            raise Exception("Expired code is being used")
+        
+        # Get full details about the invite code
+        hydrated_invite_code =  self.invite_code_adpater.get_invite_code(code=invite_code.code)
+        if hydrated_invite_code is None or hydrated_invite_code.created_by is None:
+            raise Exception("Something went wrong while hydration")
+        
+        # Mark code as expired
+        is_marked = self.invite_code_adpater.mark_expired(code=hydrated_invite_code.code)
+        if not is_marked:
+            raise Exception("Something went wrong with marking expiry")
+        created_by_user = self.user_adapter.get_user(id=hydrated_invite_code.created_by)
+
+        org = OrganizationDao(
+            id=created_by_user.orgid
+        )
+        return self.user_adapter.create_user(user=user, org=org)
+
+
+class InviteCodeFactory:
+
+    @staticmethod
+    def create_invite_code_service() -> InviteCodeService:
+        user_adapter = UserModelAdapter()
+        invite_code_adapter = InviteCodeModelAdpater()
+        org_adapter = OrganizationModelAdapter()
+        return InviteCodeService(
+            user_adpater=user_adapter,
+            invite_code_adapter=invite_code_adapter,
+            org_adapter=org_adapter,
+        )

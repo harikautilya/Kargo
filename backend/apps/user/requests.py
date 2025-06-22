@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from .dao import UserDao, OrganizationDao
+from .dao import UserDao, OrganizationDao, InviteCodeDao
 
 
 @dataclass(repr=True, eq=True, frozen=True)
@@ -27,7 +27,7 @@ class UserR:
             id=id,
         )
 
-    def toDao(self) -> UserDao:
+    def to_dao(self) -> UserDao:
         return UserDao(
             id=None,
             username=self.username,
@@ -49,11 +49,30 @@ class OrganizationR:
         name = data["name"]
         return OrganizationR(name=name)
 
-    def toDao(self) -> OrganizationDao:
+    def to_dao(self) -> OrganizationDao:
         return OrganizationDao(
             id=None,
             name=self.name,
         )
+
+
+@dataclass(repr=True, eq=True, frozen=True)
+class InviteCodeR:
+    """
+    This is the data class for service
+    """
+
+    code: str
+
+    @staticmethod
+    def from_data(data: dict) -> "InviteCodeR":
+        invite_code = data["invite_code"]
+        return InviteCodeR(code=invite_code)
+
+    def to_dao(
+        self,
+    ) -> InviteCodeDao:
+        return InviteCodeDao(code=self.code)
 
 
 @dataclass(repr=True, eq=True, frozen=True)
@@ -77,3 +96,18 @@ class UserRes:
             "id": self.id,
             "display_name": self.display_name,
         }
+
+
+@dataclass(repr=True, eq=True, frozen=True)
+class InviteCodeRes:
+
+    code: str
+
+    @staticmethod
+    def from_dao(data: InviteCodeDao) -> "InviteCodeRes":
+        return InviteCodeRes(
+            code=data.code,
+        )
+
+    def to_json(self):
+        return {"code": self.code}

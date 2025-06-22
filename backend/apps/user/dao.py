@@ -1,4 +1,22 @@
 from dataclasses import dataclass
+from datetime import datetime
+
+
+@dataclass(repr=True, eq=True, frozen=True)
+class OrganizationDao:
+    """
+    This is the data class for service
+    """
+
+    id: int | None
+    name: str  | None = None
+
+    @staticmethod
+    def from_data(data: dict):
+        name = data["name"]
+        id = data.get("id", None)
+        return OrganizationDao(name=name, id=id)
+
 
 @dataclass(repr=True, eq=True, frozen=True)
 class UserDao:
@@ -10,6 +28,7 @@ class UserDao:
     password: str | None
     display_name: str | None
     id: int | None
+    orgid: int | None = None
 
     @staticmethod
     def from_data(data: dict) -> "UserDao":
@@ -19,24 +38,18 @@ class UserDao:
         id = data.get("id", None)
 
         return UserDao(
-            username=username,
-            password=password,
-            display_name=display_name,
-            id=id,
+            username=username, password=password, display_name=display_name, id=id
         )
 
 
 @dataclass(repr=True, eq=True, frozen=True)
-class OrganizationDao:
+class InviteCodeDao:
     """
     This is the data class for service
     """
 
-    id: int | None
-    name: str
-
-    @staticmethod
-    def from_data(data: dict):
-        name = data["name"]
-        id = data.get("id", None)
-        return OrganizationDao(name=name, id=id)
+    code: str
+    expiry_at: datetime | None = None
+    expired: bool | None = None
+    created_by: int | None = None
+    used_by: int | None = None

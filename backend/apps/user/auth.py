@@ -59,7 +59,11 @@ class AuthMiddlware:
     Auth Middleware for testing
     """
 
-    allow_list = ["/user/login/"]
+    allow_list = {
+        "/user/login/" : ["POST"],
+        "/organization/invite/":  ["GET", "POST"]
+    }
+
 
     def __init__(self, get_response):
         self.get_response = get_response
@@ -67,7 +71,10 @@ class AuthMiddlware:
 
     def __call__(self, request) -> Any:
         path = request.path
-        if path not in self.allow_list:
+        method = request.method
+        should_skip = path in self.allow_list.keys()
+        should_skip  =  should_skip and method in self.allow_list[path]
+        if not should_skip:
             token = self.check_and_get_token(request.headers)
             user = self.user_coder.decode_user(token)
             request.user_id = user.id
@@ -75,7 +82,7 @@ class AuthMiddlware:
         return response
 
     def check_and_get_token(self, headers):
-    
+
         if "Authorization" not in headers:
             raise Exception("Auth token missing")
         token_header = headers["Authorization"]

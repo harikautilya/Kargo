@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password
-from .models import User, Organization
+from .models import User, Organization, Invitecode
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -35,3 +35,10 @@ class OrganizationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Organization
         fields = ["id", "organization_name"]
+
+
+class InviteCodeSeriazlizer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Invitecode
+        fields = "__all__"

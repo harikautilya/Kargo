@@ -1,8 +1,10 @@
 from rest_framework.views import APIView
 from core.views import BaseJsonView
 from dataclasses import dataclass
-from .service import UserServiceFactory, AuthServiceFactory
-from .requests import UserR, OrganizationR, UserRes
+
+from .service import UserServiceFactory, AuthServiceFactory, InviteCodeFactory
+from .requests import UserR, OrganizationR, UserRes, InviteCodeR, InviteCodeRes
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -24,7 +26,6 @@ class UserView(APIView, BaseJsonView):
         This returns the user details based on the token in header.
         """
         user = self.user_service.get_user(id=request.user_id)
-    
         return self.ok_response({"user": UserRes.from_dao(user).to_json()})
 
 
@@ -47,7 +48,7 @@ class AuthView(APIView, BaseJsonView):
         """
         login_request = AuthView.LoginUserView.from_data(request.data)
 
-        auth_token = self.auth_service.validate_user(user=login_request.toDao())
+        auth_token = self.auth_service.validate_user(user=login_request.to_dao())
         return self.ok_response({"token": auth_token})
 
 
@@ -87,7 +88,7 @@ class CreateOrganizationView(APIView, BaseJsonView):
             request.data
         )
         user = self.user_service.create_user(
-            user=create_request.user.toDao(), org=create_request.organization.toDao()
+            user=create_request.user.to_dao(), org=create_request.organization.to_dao()
         )
         return self.ok_response({"user_id": user.id})
 
@@ -95,43 +96,46 @@ class CreateOrganizationView(APIView, BaseJsonView):
 class InviteCodeView(APIView, BaseJsonView):
     """
     View class for invite code.
-    This is auth protected.
+    This is partially auth protected.
     """
 
-    @dataclass(repr=True, frozen=True, eq=True)
-    class UserInviteCode(UserR):
-        """
-        Request class for post request
-        """
+    @dataclass(repr=True, eq=True, frozen=True)
+    class UserInviteCodeR:
 
-        code: str
+        user: UserR
+        code: InviteCodeR
 
         @staticmethod
-        def from_data(data: dict) -> "InviteCodeView.UserInviteCode":
-            username = data["username"]
-            password = data["password"]
-            display_name = data.get("display_name", None)
-            code = data["code"]
-            return InviteCodeView.UserInviteCode(
-                username=username,
-                password=password,
-                display_name=display_name,
-                id=None,
+        def from_data(data: dict) -> "InviteCodeView.UserInviteCodeR":
+            user = UserR.from_data(data["user"])
+            code = InviteCodeR.from_data(data["code"])
+            return InviteCodeView.UserInviteCodeR(
                 code=code,
+                user=user,
             )
+
+    def __init__(self, **kwargs) -> None:
+        self.service = InviteCodeFactory.create_invite_code_service()
 
     def get(self, request):
         """
         Check if invite code is valid
         """
-        pass
+        invite_code = InviteCodeR.from_data(data=request.query_params)
+        is_expired = self.service.is_code_valid(code=invite_code.code)
+        if is_expired:
+            return self.empty_ok()
+        else:
+            return self.bad_request()
 
     def patch(self, request):
         """
         Generate invite code based on user.
         User details are retervied via token
         """
-        pass
+
+        code = self.service.create_user_code(id=request.user_id)
+        return self.ok_response(InviteCodeRes.from_dao(code).to_json())
 
     def post(self, request):
         """
@@ -139,5 +143,11 @@ class InviteCodeView(APIView, BaseJsonView):
         If yes, create user and respond ok
         If no, return not allowed status
         """
-        create_user = InviteCodeView.UserInviteCode.from_data(request.data)
-        return self.ok_response({})
+        create_user = InviteCodeView.UserInviteCodeR.from_data(request.data)
+        is_created = self.service.create_user_using_code(
+            user=create_user.user.to_dao(), invite_code=create_user.code.to_dao()
+        )
+        if is_created:
+            return self.empty_ok()
+        else:
+            return self.bad_request()

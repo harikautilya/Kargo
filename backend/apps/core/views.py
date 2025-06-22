@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from rest_framework.response import Response
-from rest_framework.status import HTTP_200_OK, HTTP_500_INTERNAL_SERVER_ERROR
+from rest_framework.status import HTTP_200_OK, HTTP_500_INTERNAL_SERVER_ERROR, HTTP_400_BAD_REQUEST
 
 
 class BaseJsonView:
@@ -28,3 +28,12 @@ class BaseJsonView:
         Error response with 500 
         """
         return Response(self.generic_response(obj={}, err=err), status=HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    def empty(self, status):
+        return Response(status=status)
+    
+    def empty_ok(self):
+        return self.empty(status=HTTP_200_OK)
+    
+    def bad_request(self):
+        return self.empty(status=HTTP_400_BAD_REQUEST)
